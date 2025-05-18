@@ -9,18 +9,11 @@ from google.generativeai.types import HarmCategory, HarmBlockThreshold, Generati
 from google.cloud import texttospeech_v1beta1 as texttospeech
 from google.api_core.exceptions import GoogleAPIError
 import google.generativeai as genai
-from fastapi import Body
-from pydantic import BaseModel
 
 genai.configure(api_key="AIzaSyBEuvNtfnut83QoBV90tEEO8EhU-TU4MRI")
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-class TranslationRequest(BaseModel):
-    text: str
-    source_language: str
-    target_language: str
 
 app = FastAPI()
 
@@ -124,7 +117,11 @@ def synthesize_text_to_audio(text: str, language_code: str, gender: texttospeech
 
 
 @app.post("/process-audio/")
-async def process_audio(file: UploadFile, main_language: str = Form(...), other_language: str = Form(...)):
+async def process_audio(
+        file: UploadFile,
+        main_language: str = Form(...),
+        other_language: str = Form(...)
+):
     try:
         logger.info(f"Received file: name={file.filename}, content_type={file.content_type}")
 
@@ -276,22 +273,17 @@ async def process_audio(file: UploadFile, main_language: str = Form(...), other_
         raise HTTPException(status_code=500, detail=f"An internal server error occurred: {str(e)}")
 
 
-# async def translate_text(text: str = Form(...), source_language: str = Form(...), target_language: str = Form(...)):
 @app.post("/translate-text/")
-async def translate_text(request: TranslationRequest = Body(...)):
-    print("🔁 /translate-text/ endpoint hit!")
-    print("Received body:", request)
-    print("testttttttttttttttt jsonnnnnnnn", request.text, request.source_language, request.target_language)
-    # print("testttttttttttttttt", text, source_language, target_language)
+async def translate_text(text: str = Form(...), source_language: str = Form(...), target_language: str = Form(...)):
+    print("testttttttttttttttt", text, source_language, target_language)
     try:
-        # logger.info(f"Received text for translation: '{text}' from {source_language} to {target_language}")
-        logger.info(f"Received text for translation: '{request.text}' from {request.source_language} to {request.target_language}")
+        logger.info(f"Received text for translation: '{text}' from {source_language} to {target_language}")
 
         # Construct user prompt
         user_prompt = f"""Task: Translate the following text.
-        Source Language: {request.source_language}
-        Target Language: {request.target_language}
-        Text: {request.text}
+        Source Language: {source_language}
+        Target Language: {target_language}
+        Text: {text}
         
         Translate with simple vocabulary and keep context/gender sensitivity in mind.
         Output only the translated text, without any explanation or formatting."""
@@ -318,9 +310,9 @@ async def translate_text(request: TranslationRequest = Body(...)):
 
         return {
             "timestamp": datetime.utcnow().isoformat(),
-            "source_language": request.source_language,
-            "target_language": request.target_language,
-            "original_text": request.text,
+            "source_language": source_language,
+            "target_language": target_language,
+            "original_text": text,
             "translated_text": translated_text
         }
 
